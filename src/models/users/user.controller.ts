@@ -12,7 +12,6 @@ const userRouter = Router()
 
 userRouter.post('/register', userCreateValidation(), validateData, insertNewUser)
 userRouter.post('/authenticate', userAuthenticationValidation(), validateData, authenticate)
-userRouter.post('/refresh-token', refreshToken)
 userRouter.get('/', listAllUsers)
 userRouter.get('/:id', getById)
 userRouter.put('/:id', updateUser)
@@ -22,27 +21,27 @@ export default userRouter
 
 
 // Controller functions
+//-----------------------------------------------------------------------------------
 
 async function authenticate(req: Request, res: Response, next: NextFunction) {
     try {
         const { password, email } = req.body
 
         const authResult = await userService.authenticateUser( email, password )
-        const {authToken, ...user} = authResult
+        const { authorizedUser, authToken } = authResult
+        
+        if ( authorizedUser.password) {
+            authorizedUser.password = undefined
+        }
 
         setCookieAuthenticatedToken( res, authToken, 7 )
 
-        res.status(200).json( user )
+        res.status(200).json( authorizedUser )
     }
     catch (error: any) {
         Logger.error(`Erro durante autenticação do usuário: ${ error.message }`)
         return next( error )
     }
-}
-
-async function refreshToken(req: Request, res: Response, next: NextFunction) {
-    // Stopped here
-    res.status(501).json("Under construction")
 }
 
 async function insertNewUser(req: Request, res: Response, next: NextFunction) {
@@ -108,7 +107,10 @@ async function deleteUser(req: Request, res: Response, next: NextFunction) {
     }
 }
 
+
 // Helper functions
+//-----------------------------------------------------------------------------------
+
 function setCookieAuthenticatedToken(res: Response, token: string, cookieDurationInDays: number): void {
     const cookieOptions: CookieOptions = {
         httpOnly: true,

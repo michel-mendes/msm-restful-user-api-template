@@ -1,5 +1,5 @@
 {
-  "name": "backend",
+  "name": "msm-restful-user-api-template",
   "version": "1.0.0",
   "description": "",
   "main": "src/app.js",
