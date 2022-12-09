@@ -3,6 +3,7 @@ import { IUser, User } from "./user";
 import { hash, compare } from "bcryptjs";
 import config from "config"
 import jwt from "jsonwebtoken"
+import crypto from "crypto"
 import Roles from "../../types/user-roles";
 
 export const userService = {
@@ -17,7 +18,7 @@ export const userService = {
 
 async function authenticateUser(requestEmail: string, requestPassword: string): Promise<any> {
     const user: IUser | null = await User.findOne( {email: requestEmail} ).select('+password')
-    
+
     const userNotFound = user == null
     const incorrectPassword = user ? (await compare( requestPassword, user.password! )) == false : true
 
@@ -26,7 +27,7 @@ async function authenticateUser(requestEmail: string, requestPassword: string): 
     }
     
     // Successful user authentication
-    const authToken = jwt.sign({ sub: user._id }, config.get<string>('secret'), { expiresIn: '7d' })
+    const authToken = jwt.sign({ sub: user.id }, config.get<string>('secret'), { expiresIn: '7d' })
       
     return {
         authorizedUser: user,
@@ -43,7 +44,8 @@ async function create( userData: IUser ): Promise<IUser> {
     }
 
     userData.role = isFirstUser ? Roles.admin : Roles.user
-    userData.password = await hash( userData.password!, 10 )
+    userData.password = await hashUserPassword( userData.password )
+    userData.verificationToken = generateRandomTokenString()
 
     const newUser: IUser = await User.create( userData )
 
@@ -109,8 +111,10 @@ async function emailAlreadyRegistered( email: string ): Promise<boolean> {
     return user.length > 0
 }
 
-function hideUserPassword( user: any ): {} {
-    const { password, ...passwordRemoved } = user._doc
+async function hashUserPassword( password: string ): Promise<string> {
+    return await hash( password, 10 )
+}
 
-    return passwordRemoved
+function generateRandomTokenString(): string {
+    return crypto.randomBytes( 40 ).toString('hex')
 }

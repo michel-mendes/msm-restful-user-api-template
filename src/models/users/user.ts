@@ -6,12 +6,14 @@ export {
 }
 
 interface IUser {
-    _id: string;
+    id?: string;
     firstName: string;
-    lastName?: string | null;
+    lastName?: string;
     role: string | undefined;
     email: string;
     password: string;
+    verificationToken?: string;
+    verifiedAt: Date;
 }
 
 const userSchema = new Schema<IUser>(
@@ -21,9 +23,18 @@ const userSchema = new Schema<IUser>(
         lastName: { type: String },
         role: { type: String },
         email: { type: String, required: true },
-        password: { type: String, required: true, select: false }
+        password: { type: String, required: true, select: false },
+        verificationToken: { type: String },
+        verifiedAt: { type: Date }
     },
     {
+        toJSON: {
+            virtuals: true,
+            versionKey: false,
+            transform: (doc, ret) => {
+                delete ret._id
+            }
+        },
         timestamps: true
     }
 )
