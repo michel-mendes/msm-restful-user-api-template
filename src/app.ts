@@ -5,6 +5,7 @@ require("dotenv").config()
 // Module imports
 import express from "express"
 import cookieParser from "cookie-parser"
+import cors from "cors"
 import config from "config"
 import db from "../config/db"
 import Logger from "../config/logger"
@@ -18,6 +19,16 @@ const port = config.get<number>( 'port' )
 // Middlewares
 app.use( express.json() )
 app.use( cookieParser() )
+
+// cors will allow requests from any origin, needed anywhere other than 'localhost'
+app.use( cors(
+    {
+        origin: ( origin: any, callback: any ) => { callback(null, true) },
+        credentials: true
+    }
+) )
+
+
 app.use( morganMiddleware )
 
 // App "API" Route controller

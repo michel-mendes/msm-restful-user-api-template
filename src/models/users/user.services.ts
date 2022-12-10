@@ -17,7 +17,7 @@ export const userService = {
 }
 
 async function authenticateUser(requestEmail: string, requestPassword: string): Promise<any> {
-    const user: IUser | null = await User.findOne( {email: requestEmail} ).select('+password')
+    const user: IUser | null = await User.findOne( {email: requestEmail} )
 
     const userNotFound = user == null
     const incorrectPassword = user ? (await compare( requestPassword, user.password! )) == false : true
@@ -27,7 +27,7 @@ async function authenticateUser(requestEmail: string, requestPassword: string): 
     }
     
     // Successful user authentication
-    const authToken = jwt.sign({ sub: user.id }, config.get<string>('secret'), { expiresIn: '7d' })
+    const authToken = jwt.sign({ sub: user.id , userId: user.id}, config.get<string>('secret'), { expiresIn: '7d' })
       
     return {
         authorizedUser: user,

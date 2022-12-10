@@ -29,10 +29,6 @@ async function authenticate(req: Request, res: Response, next: NextFunction) {
 
         const authResult = await userService.authenticateUser( email, password )
         const { authorizedUser, authToken } = authResult
-        
-        if ( authorizedUser.password) {
-            authorizedUser.password = undefined
-        }
 
         setCookieAuthenticatedToken( res, authToken, 7 )
 
@@ -46,6 +42,8 @@ async function authenticate(req: Request, res: Response, next: NextFunction) {
 
 async function insertNewUser(req: Request, res: Response, next: NextFunction) {
     try {
+        // console.log(`Origem da requisição: ${ req.get('origin') }`)
+
         const userData = req.body
 
         const newUser: IUser = await userService.create( userData )

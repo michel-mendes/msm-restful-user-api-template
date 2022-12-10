@@ -23,7 +23,7 @@ const userSchema = new Schema<IUser>(
         lastName: { type: String },
         role: { type: String },
         email: { type: String, required: true },
-        password: { type: String, required: true, select: false },
+        password: { type: String, required: true },
         verificationToken: { type: String },
         verifiedAt: { type: Date }
     },
@@ -33,6 +33,7 @@ const userSchema = new Schema<IUser>(
             versionKey: false,
             transform: (doc, ret) => {
                 delete ret._id
+                delete ret.password
             }
         },
         timestamps: true
