@@ -1,6 +1,7 @@
 import { AppError } from "../../middleware/error-handler";
 import { IUser, User } from "./user";
 import { hash, compare } from "bcryptjs";
+import { sendEmail } from "../../helpers/mailer";
 import config from "config"
 import jwt from "jsonwebtoken"
 import crypto from "crypto"
@@ -35,7 +36,7 @@ async function authenticateUser(requestEmail: string, requestPassword: string): 
     }
 }
 
-async function create( userData: IUser ): Promise<IUser> {
+async function create( userData: IUser, host: string | undefined = undefined): Promise<IUser> {
     const isFirstUser: boolean = ( await User.countDocuments({}) ) === 0
     const userAlreadyExisits: boolean = await emailAlreadyRegistered( userData.email )
 
@@ -47,6 +48,8 @@ async function create( userData: IUser ): Promise<IUser> {
     userData.password = await hashUserPassword( userData.password )
     userData.verificationToken = generateRandomTokenString()
 
+    await sendUserVerificationEmail( userData, host )
+    
     const newUser: IUser = await User.create( userData )
 
     return newUser
@@ -117,4 +120,24 @@ async function hashUserPassword( password: string ): Promise<string> {
 
 function generateRandomTokenString(): string {
     return crypto.randomBytes( 40 ).toString('hex')
+}
+
+async function sendUserVerificationEmail( user: IUser, hostAddress: string | undefined = undefined ) {
+    let bodyMessage: string;
+
+    if ( hostAddress ) {
+        const verifyUrl = `http://${ hostAddress }/user/verify-email?token=${ user.verificationToken }`
+        bodyMessage = `<h2>Verificação de cadastro em nossa API</h2>
+                       <p>Olá ${ user.firstName }, muito obrigado pela realização de seu cadastro em nosso app.</p>
+                       <p>Para concluir o seu cadastro, falat apenas fazer a verificação de sua conta</p><br>
+                       <p id="pre">id="pre" -> Por favor, clique no link abaixo para prosseguir com a verificação de seu endereço de email:</p>`
+        bodyMessage += '<p><a href="' + verifyUrl + '" id="teste" glp_id="kkk">' + verifyUrl + '</a></p>'
+                       
+    } else {
+        bodyMessage = `<p>Por favor, acesse nosso website e acrescente o link abaixo para prosseguir com a verificação:</p>
+                       <p>Link.................: #NossoWebsite + /user/verify-email</p>
+                       <p>Código de verificação: <code>${ user.verificationToken }</code></p>`
+    }
+
+    await sendEmail(user.email, "Teste cadastro de novo usuário -> Verificação de conta", bodyMessage)
 }

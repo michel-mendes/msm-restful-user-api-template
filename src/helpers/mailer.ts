@@ -1,13 +1,26 @@
-import nodemailer from "nodemailer"
-import config from "config"
+import nodemailer, { TransportOptions } from "nodemailer"
+import appConfigs from "../../config/default"
 
-const emailConfigs = config.get('emailConfig')
+export { sendEmail }
 
-/*
-async function sendEmail({
+async function sendEmail(
     to: string,
     subject: string,
     htmlContent: string,
-    from = emailConfigs.from
-})
-*/
+    from: string = appConfigs.emailConfig.from!
+): Promise<void> {
+    
+    const transporter = nodemailer.createTransport<Object>( <Object>appConfigs.emailConfig.smtpOptions )
+    await transporter.sendMail(
+        {
+            from: from,
+            to: to,
+            subject: subject,
+            html: htmlContent,
+            encoding: 'utf-8'
+        }
+    )
+
+    return
+    
+}

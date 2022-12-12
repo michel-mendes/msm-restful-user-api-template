@@ -45,8 +45,9 @@ async function insertNewUser(req: Request, res: Response, next: NextFunction) {
         // console.log(`Origem da requisição: ${ req.get('origin') }`)
 
         const userData = req.body
+        const hostAddress = req.get("host")
 
-        const newUser: IUser = await userService.create( userData )
+        const newUser: IUser = await userService.create( userData, hostAddress )
 
         return res.status(201).json( newUser )
     }
