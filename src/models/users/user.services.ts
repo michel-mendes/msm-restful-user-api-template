@@ -1,5 +1,6 @@
 import { AppError } from "../../middleware/error-handler";
 import { IUser, User } from "./user";
+import { IRefreshToken, RefreshToken } from "../refresh_token/refresh-token";
 import { hash, compare } from "bcryptjs";
 import { sendEmail } from "../../helpers/mailer";
 import config from "config"
@@ -9,6 +10,7 @@ import Roles from "../../types/user-roles";
 
 export const userService = {
     authenticateUser,
+    verifyEmail,
     create,
     getAll,
     getById,
@@ -17,7 +19,7 @@ export const userService = {
     _delete
 }
 
-async function authenticateUser(requestEmail: string, requestPassword: string): Promise<any> {
+async function authenticateUser(requestEmail: string, requestPassword: string, ipAddress: string): Promise<any> {
     const user: IUser | null = await User.findOne( {email: requestEmail} )
 
     const userNotFound = user == null
@@ -29,11 +31,24 @@ async function authenticateUser(requestEmail: string, requestPassword: string): 
     
     // Successful user authentication
     const authToken = jwt.sign({ sub: user.id , userId: user.id}, config.get<string>('secret'), { expiresIn: '7d' })
+    const refreshToken = await createNewRefreshToken( user, ipAddress )
       
     return {
         authorizedUser: user,
-        authToken: authToken
+        authToken: authToken,
+        refreshToken: refreshToken.token
     }
+}
+
+async function verifyEmail( token: string ) {
+    const user: IUser | null = await User.findOne( {verificationToken: token} )
+
+    if ( !user ) throw new AppError( "Token inválido!", 404 )
+
+    user.verifiedAt = new Date()
+    user.verificationToken = undefined
+
+    await user.save()
 }
 
 async function create( userData: IUser, host: string | undefined = undefined): Promise<IUser> {
@@ -122,22 +137,37 @@ function generateRandomTokenString(): string {
     return crypto.randomBytes( 40 ).toString('hex')
 }
 
+async function createNewRefreshToken( user: IUser, ipAddress: string ): Promise<IRefreshToken> {
+    const tokenData = {
+        user: user._id,
+        token: generateRandomTokenString(),
+        expiresAt: new Date( Date.now() + 7 * (24*60*60*1000) ),
+        createdByIp: ipAddress
+    }
+
+    const newRefreshToken: IRefreshToken = await RefreshToken.create( tokenData )
+
+    return newRefreshToken
+}
+
 async function sendUserVerificationEmail( user: IUser, hostAddress: string | undefined = undefined ) {
     let bodyMessage: string;
 
     if ( hostAddress ) {
-        const verifyUrl = `http://${ hostAddress }/user/verify-email?token=${ user.verificationToken }`
+        const verifyUrl = `http://${ hostAddress }/api/user/verify-account?token=${ user.verificationToken }`
+        const lastName = user.lastName ? ` ${user.lastName}` :  ``
+
         bodyMessage = `<h2>Verificação de cadastro em nossa API</h2>
-                       <p>Olá ${ user.firstName }, muito obrigado pela realização de seu cadastro em nosso app.</p>
-                       <p>Para concluir o seu cadastro, falat apenas fazer a verificação de sua conta</p><br>
-                       <p id="pre">id="pre" -> Por favor, clique no link abaixo para prosseguir com a verificação de seu endereço de email:</p>`
-        bodyMessage += '<p><a href="' + verifyUrl + '" id="teste" glp_id="kkk">' + verifyUrl + '</a></p>'
+                       <p>Olá ${ user.firstName }${ lastName }, muito obrigado pela realização de seu cadastro em nosso app.</p>
+                       <p>Agora falta apenas fazer a verificação de sua conta</p><br>
+                       <p>Por favor, clique no link abaixo para prosseguir com a verificação de seu endereço de email:</p>
+                       <code><a href="${ verifyUrl }">${ verifyUrl }</a></code>`
                        
     } else {
         bodyMessage = `<p>Por favor, acesse nosso website e acrescente o link abaixo para prosseguir com a verificação:</p>
-                       <p>Link.................: #NossoWebsite + /user/verify-email</p>
-                       <p>Código de verificação: <code>${ user.verificationToken }</code></p>`
+                       <pre>Link.................: #NossoWebsite + /api/user/verify-account</pre>
+                       <pre>Código de verificação: <code>${ user.verificationToken }</code></pre>`
     }
 
-    await sendEmail(user.email, "Teste cadastro de novo usuário -> Verificação de conta", bodyMessage)
+    await sendEmail(user.email, "Verificação de conta", bodyMessage)
 }

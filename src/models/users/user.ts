@@ -1,11 +1,11 @@
-import {model, Schema} from "mongoose"
+import {model, Schema, Document} from "mongoose"
 
 export {
     IUser,
     User
 }
 
-interface IUser {
+interface IUser extends Document {
     id?: string;
     firstName: string;
     lastName?: string;
@@ -34,10 +34,15 @@ const userSchema = new Schema<IUser>(
             transform: (doc, ret) => {
                 delete ret._id
                 delete ret.password
+                delete ret.verificationToken
             }
         },
         timestamps: true
     }
 )
+
+userSchema.virtual( 'isVerified' ).get( function () {
+    return this.verifiedAt !== undefined
+})
 
 const User = model<IUser>('User', userSchema)

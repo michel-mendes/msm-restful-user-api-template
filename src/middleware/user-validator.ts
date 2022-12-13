@@ -1,8 +1,9 @@
-import { body } from "express-validator"
+import { body, check } from "express-validator"
 
 export {
     userCreateValidation,
-    userAuthenticationValidation
+    userAuthenticationValidation,
+    userAccountVerificationValidator
 }
 
 const userCreateValidation = () => {
@@ -41,6 +42,17 @@ const userAuthenticationValidation = () => {
         .withMessage('A senha é obrigatória')
         .isLength({ min: 6 })
         .withMessage('A senha deve conter no mínimo 6 caracteres'),        
+    ]
+
+}
+
+const userAccountVerificationValidator = () => {
+    
+    // console.log(check.arguments)
+    return [
+        check('token')
+        .exists({checkFalsy: true})
+        .withMessage("Informe o token de validação via query string '?token='")
     ]
 
 }

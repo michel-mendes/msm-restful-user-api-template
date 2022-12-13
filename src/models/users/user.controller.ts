@@ -5,12 +5,13 @@ import Logger from "../../../config/logger"
 
 // Validations
 import { validateData } from "../../middleware/validation-handler"
-import { userCreateValidation, userAuthenticationValidation } from "../../middleware/user-validator"
+import { userCreateValidation, userAuthenticationValidation, userAccountVerificationValidator } from "../../middleware/user-validator"
 
 // Routes related to Users
 const userRouter = Router()
 
 userRouter.post('/register', userCreateValidation(), validateData, insertNewUser)
+userRouter.get('/verify-account', userAccountVerificationValidator(),validateData, verifyUserAccount)
 userRouter.post('/authenticate', userAuthenticationValidation(), validateData, authenticate)
 userRouter.get('/', listAllUsers)
 userRouter.get('/:id', getById)
@@ -26,8 +27,9 @@ export default userRouter
 async function authenticate(req: Request, res: Response, next: NextFunction) {
     try {
         const { password, email } = req.body
+        const ipAddress = req.ip
 
-        const authResult = await userService.authenticateUser( email, password )
+        const authResult = await userService.authenticateUser( email, password, ipAddress )
         const { authorizedUser, authToken } = authResult
 
         setCookieAuthenticatedToken( res, authToken, 7 )
@@ -36,6 +38,18 @@ async function authenticate(req: Request, res: Response, next: NextFunction) {
     }
     catch (error: any) {
         Logger.error(`Erro durante autenticação do usuário: ${ error.message }`)
+        return next( error )
+    }
+}
+
+async function verifyUserAccount(req: Request, res: Response, next: NextFunction) {
+    try {
+        await userService.verifyEmail( <string>req.query.token )
+
+        return res.status(200).json({message: "Verificação concluída com sucesso, você já pode fazer login!"})
+    }
+    catch (error: any) {
+        Logger.error(`Erro durante a verificação de email do usuário: ${ error.message }`)
         return next( error )
     }
 }

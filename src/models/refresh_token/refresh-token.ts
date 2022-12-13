@@ -1,21 +1,21 @@
-import {model, Schema} from "mongoose"
+import { model, Schema, Document, ObjectId } from "mongoose"
 
 export {
     IRefreshToken,
     RefreshToken
 }
 
-interface IRefreshToken {
-    user: object,
+interface IRefreshToken extends Document {
+    user: ObjectId,
     token: string,
     createdByIp: string,
     expiresAt: Date,
-    createdAt: Date,
-    updatedAt: Date,
-    revokedAt: Date | undefined,
-    revokedByIp: string | undefined,
-    replacedByToken: string
-    isExpired: boolean | undefined
+    createdAt?: Date,
+    updatedAt?: Date,
+    revokedAt?: Date,
+    revokedByIp?: string,
+    replacedByToken?: string
+    isExpired?: boolean
 }
 
 const refreshTokenSchema = new Schema<IRefreshToken>({
