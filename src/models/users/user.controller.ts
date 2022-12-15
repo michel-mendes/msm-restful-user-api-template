@@ -1,11 +1,13 @@
 import { Router, NextFunction, Request, Response, CookieOptions } from "express"
 import { IUser } from "./user"
 import { userService } from "./user.services"
+import Roles from "../../types/user-roles"
 import Logger from "../../../config/logger"
 
 // Validations
 import { validateData } from "../../middleware/validation-handler"
 import { userCreateValidation, userAuthenticationValidation, userAccountVerificationValidator } from "../../middleware/user-validator"
+import { userAuthorize } from "../../middleware/user-authorize"
 
 // Routes related to Users
 const userRouter = Router()
@@ -13,10 +15,10 @@ const userRouter = Router()
 userRouter.post('/register', userCreateValidation(), validateData, insertNewUser)
 userRouter.get('/verify-account', userAccountVerificationValidator(),validateData, verifyUserAccount)
 userRouter.post('/authenticate', userAuthenticationValidation(), validateData, authenticate)
-userRouter.get('/', listAllUsers)
-userRouter.get('/:id', getById)
-userRouter.put('/:id', updateUser)
-userRouter.delete('/:id', deleteUser)
+userRouter.get('/', userAuthorize( Roles.admin ), listAllUsers)
+userRouter.get('/:id', userAuthorize(), getById)
+userRouter.put('/:id', userAuthorize(), updateUser)
+userRouter.delete('/:id', userAuthorize(), deleteUser)
 
 export default userRouter
 
@@ -30,9 +32,9 @@ async function authenticate(req: Request, res: Response, next: NextFunction) {
         const ipAddress = req.ip
 
         const authResult = await userService.authenticateUser( email, password, ipAddress )
-        const { authorizedUser, authToken } = authResult
+        const { refreshToken, ...authorizedUser } = authResult
 
-        setCookieAuthenticatedToken( res, authToken, 7 )
+        setCookieAuthenticatedToken( res, refreshToken, 7 )
 
         res.status(200).json( authorizedUser )
     }
@@ -88,7 +90,7 @@ async function getById(req: Request, res: Response, next: NextFunction) {
     try {
         let user: IUser = await userService.getById( req.params.id )
 
-         return res.status(200).json( user )
+        return res.status(200).json( user )
     }
     catch (e: any) {
         Logger.error( `Erro ao pesquisar usuário: ${ e.message }` )

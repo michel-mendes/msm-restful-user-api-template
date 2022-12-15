@@ -30,14 +30,16 @@ async function authenticateUser(requestEmail: string, requestPassword: string, i
     }
     
     // Successful user authentication
-    const authToken = jwt.sign({ sub: user.id , userId: user.id}, config.get<string>('secret'), { expiresIn: '7d' })
+    const signedObjectData = {
+        userId: user.id,
+        userName: user.firstName,
+        userRole: user.role
+    }
+
+    const authToken = jwt.sign( signedObjectData, config.get<string>('secret'), { expiresIn: '7d' } )
     const refreshToken = await createNewRefreshToken( user, ipAddress )
       
-    return {
-        authorizedUser: user,
-        authToken: authToken,
-        refreshToken: refreshToken.token
-    }
+    return {...user?.toJSON(), authToken: authToken, refreshToken: refreshToken }
 }
 
 async function verifyEmail( token: string ) {
