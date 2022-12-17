@@ -14,6 +14,7 @@ interface IUser extends Document {
     password: string;
     verificationToken?: string;
     verifiedAt: Date;
+    authorizationToken?: string
 }
 
 const userSchema = new Schema<IUser>(
@@ -25,7 +26,8 @@ const userSchema = new Schema<IUser>(
         email: { type: String, required: true },
         password: { type: String, required: true },
         verificationToken: { type: String },
-        verifiedAt: { type: Date }
+        verifiedAt: { type: Date },
+        authorizationToken: { type: String }
     },
     {
         toJSON: {
@@ -35,6 +37,7 @@ const userSchema = new Schema<IUser>(
                 delete ret._id
                 delete ret.password
                 delete ret.verificationToken
+                delete ret.authorizationToken
             }
         },
         timestamps: true

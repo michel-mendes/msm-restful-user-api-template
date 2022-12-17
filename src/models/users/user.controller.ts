@@ -32,11 +32,8 @@ async function authenticate(req: Request, res: Response, next: NextFunction) {
         const ipAddress = req.ip
 
         const authResult = await userService.authenticateUser( email, password, ipAddress )
-        const { refreshToken, ...authorizedUser } = authResult
 
-        setCookieAuthenticatedToken( res, refreshToken, 7 )
-
-        res.status(200).json( authorizedUser )
+        res.status(200).json( authResult )
     }
     catch (error: any) {
         Logger.error(`Erro durante autenticação do usuário: ${ error.message }`)
@@ -120,17 +117,4 @@ async function deleteUser(req: Request, res: Response, next: NextFunction) {
         Logger.error( `Erro ao excluir usuário: ${ e.message }` )
         return next(e)
     }
-}
-
-
-// Helper functions
-//-----------------------------------------------------------------------------------
-
-function setCookieAuthenticatedToken(res: Response, token: string, cookieDurationInDays: number): void {
-    const cookieOptions: CookieOptions = {
-        httpOnly: true,
-        expires: new Date( Date.now() + (cookieDurationInDays * ( 24 * 60 * 60 * 1000 )) )
-    }
-
-    res.cookie('refreshToken', token, cookieOptions)
 }

@@ -1,6 +1,5 @@
 import { AppError } from "../../middleware/error-handler";
 import { IUser, User } from "./user";
-import { IRefreshToken, RefreshToken } from "../refresh_token/refresh-token";
 import { hash, compare } from "bcryptjs";
 import { sendEmail } from "../../helpers/mailer";
 import config from "config"
@@ -36,10 +35,10 @@ async function authenticateUser(requestEmail: string, requestPassword: string, i
         userRole: user.role
     }
 
-    const authToken = jwt.sign( signedObjectData, config.get<string>('secret'), { expiresIn: '7d' } )
-    const refreshToken = await createNewRefreshToken( user, ipAddress )
+    user.authorizationToken = jwt.sign( signedObjectData, config.get<string>('secret'), { expiresIn: '7d' } )
+    await user.save()
       
-    return {...user?.toJSON(), authToken: authToken, refreshToken: refreshToken }
+    return user.toJSON()
 }
 
 async function verifyEmail( token: string ) {
@@ -137,19 +136,6 @@ async function hashUserPassword( password: string ): Promise<string> {
 
 function generateRandomTokenString(): string {
     return crypto.randomBytes( 40 ).toString('hex')
-}
-
-async function createNewRefreshToken( user: IUser, ipAddress: string ): Promise<IRefreshToken> {
-    const tokenData = {
-        user: user._id,
-        token: generateRandomTokenString(),
-        expiresAt: new Date( Date.now() + 7 * (24*60*60*1000) ),
-        createdByIp: ipAddress
-    }
-
-    const newRefreshToken: IRefreshToken = await RefreshToken.create( tokenData )
-
-    return newRefreshToken
 }
 
 async function sendUserVerificationEmail( user: IUser, hostAddress: string | undefined = undefined ) {
