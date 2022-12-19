@@ -14,7 +14,11 @@ interface IUser extends Document {
     password: string;
     verificationToken?: string;
     verifiedAt: Date;
-    authorizationToken?: string
+    authorizationToken?: string;
+    resetPasswordToken?: {
+        token: string;
+        expireAt: Date;
+    };
 }
 
 const userSchema = new Schema<IUser>(
@@ -27,7 +31,11 @@ const userSchema = new Schema<IUser>(
         password: { type: String, required: true },
         verificationToken: { type: String },
         verifiedAt: { type: Date },
-        authorizationToken: { type: String }
+        authorizationToken: { type: String },
+        resetPasswordToken: {
+            token: { type: String },
+            expireAt: { type: Date }
+        }
     },
     {
         toJSON: {
@@ -38,6 +46,7 @@ const userSchema = new Schema<IUser>(
                 delete ret.password
                 delete ret.verificationToken
                 delete ret.authorizationToken
+                delete ret.resetPasswordToken
             }
         },
         timestamps: true

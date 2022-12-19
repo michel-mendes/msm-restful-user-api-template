@@ -1,20 +1,24 @@
-import { Router, NextFunction, Request, Response, CookieOptions } from "express"
+import { Router, NextFunction, Request, Response } from "express"
+import { Request as JwtRequest } from "express-jwt"
 import { IUser } from "./user"
 import { userService } from "./user.services"
+import { AppError } from "../../middleware/error-handler"
 import Roles from "../../types/user-roles"
 import Logger from "../../../config/logger"
 
 // Validations
 import { validateData } from "../../middleware/validation-handler"
-import { userCreateValidation, userAuthenticationValidation, userAccountVerificationValidator } from "../../middleware/user-validator"
+import { userCreateValidation, userAuthenticationValidation, userAccountVerificationValidator, userForgotPasswordValidator } from "../../middleware/user-validator"
 import { userAuthorize } from "../../middleware/user-authorize"
 
 // Routes related to Users
 const userRouter = Router()
 
 userRouter.post('/register', userCreateValidation(), validateData, insertNewUser)
-userRouter.get('/verify-account', userAccountVerificationValidator(),validateData, verifyUserAccount)
+userRouter.get('/verify-user', userAccountVerificationValidator(),validateData, verifyUserAccount)
 userRouter.post('/authenticate', userAuthenticationValidation(), validateData, authenticate)
+userRouter.post('/forgot-password', userForgotPasswordValidator(), validateData, forgotPassword)
+userRouter.post('/reset-password') // TO DO
 userRouter.get('/', userAuthorize( Roles.admin ), listAllUsers)
 userRouter.get('/:id', userAuthorize(), getById)
 userRouter.put('/:id', userAuthorize(), updateUser)
@@ -53,6 +57,18 @@ async function verifyUserAccount(req: Request, res: Response, next: NextFunction
     }
 }
 
+async function forgotPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+        await userService.forgotPassword( req.body.email, req.get('host') )
+
+        return res.status(200).json( {message: `If there is a registered email address, you will receive an email containing the necessary instructions.`} )
+    }
+    catch (error: any) {
+        Logger.error(`Error while sending the reset password email: ${ error.message }`)        
+        return next( error )
+    }
+}
+
 async function insertNewUser(req: Request, res: Response, next: NextFunction) {
     try {
         // console.log(`Origem da requisição: ${ req.get('origin') }`)
@@ -83,8 +99,13 @@ async function listAllUsers(req: Request, res: Response, next: NextFunction) {
 
 }
 
-async function getById(req: Request, res: Response, next: NextFunction) {
+async function getById(req: JwtRequest, res: Response, next: NextFunction) {
     try {
+
+        if ( req.auth?.userId !== req.params.id ) {
+            throw new AppError( 'Unauthorized access', 401 )
+        }
+        
         let user: IUser = await userService.getById( req.params.id )
 
         return res.status(200).json( user )

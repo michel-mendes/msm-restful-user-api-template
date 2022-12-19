@@ -1,7 +1,7 @@
 import { NextFunction, Response } from "express"
-import jwt from "jsonwebtoken"
 import { expressjwt, Request } from "express-jwt"
 import { IUser, User } from "../models/users/user"
+import jwt from "jsonwebtoken"
 import config from "config"
 
 const secret: string = config.get<string>('secret')

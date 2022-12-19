@@ -3,7 +3,8 @@ import { body, check } from "express-validator"
 export {
     userCreateValidation,
     userAuthenticationValidation,
-    userAccountVerificationValidator
+    userAccountVerificationValidator,
+    userForgotPasswordValidator
 }
 
 const userCreateValidation = () => {
@@ -53,6 +54,16 @@ const userAccountVerificationValidator = () => {
         check('token')
         .exists({checkFalsy: true})
         .withMessage("Informe o token de validação via query string '?token='")
+    ]
+
+}
+
+const userForgotPasswordValidator = () => {
+
+    return [
+        body('email')
+        .isEmail()
+        .withMessage('Email is required to start the reset password process')
     ]
 
 }

@@ -10,6 +10,7 @@ import Roles from "../../types/user-roles";
 export const userService = {
     authenticateUser,
     verifyEmail,
+    forgotPassword,
     create,
     getAll,
     getById,
@@ -35,10 +36,10 @@ async function authenticateUser(requestEmail: string, requestPassword: string, i
         userRole: user.role
     }
 
-    user.authorizationToken = jwt.sign( signedObjectData, config.get<string>('secret'), { expiresIn: '7d' } )
+    user.authorizationToken = generateAuthorizationJwtToken( signedObjectData )
     await user.save()
       
-    return user.toJSON()
+    return { ...user.toJSON(), authorizationToken: user.authorizationToken}
 }
 
 async function verifyEmail( token: string ) {
@@ -121,6 +122,24 @@ async function _delete( userId: string ): Promise<void> {
     return
 }
 
+async function forgotPassword( userEmail: string, originHost: string | undefined = undefined ) {
+    const user: IUser | null = await User.findOne( { email: userEmail } ) as any
+
+    if ( !user ) {
+        throw new AppError('Email not found', 404)
+    }
+
+    user.resetPasswordToken = {
+        token: generateRandomTokenString(),
+        expireAt: new Date(Date.now() + 24*60*60*1000) // 1 days espiration
+    }
+
+    await user.save()
+
+    await sendForgotPasswordEmail( user, originHost )
+
+}
+
 // Helper functions
 async function emailAlreadyRegistered( email: string ): Promise<boolean> {
     if ( !email ) return false
@@ -134,15 +153,19 @@ async function hashUserPassword( password: string ): Promise<string> {
     return await hash( password, 10 )
 }
 
+function generateAuthorizationJwtToken( payload: string | object | Buffer ): string {
+    return jwt.sign( payload, config.get<string>('secret'), { expiresIn: '7d' } )
+}
+
 function generateRandomTokenString(): string {
     return crypto.randomBytes( 40 ).toString('hex')
 }
 
 async function sendUserVerificationEmail( user: IUser, hostAddress: string | undefined = undefined ) {
-    let bodyMessage: string;
+    let bodyMessage: string
 
     if ( hostAddress ) {
-        const verifyUrl = `http://${ hostAddress }/api/user/verify-account?token=${ user.verificationToken }`
+        const verifyUrl = `http://${ hostAddress }/api/user/verify-user?token=${ user.verificationToken }`
         const lastName = user.lastName ? ` ${user.lastName}` :  ``
 
         bodyMessage = `<h2>Verificação de cadastro em nossa API</h2>
@@ -153,9 +176,30 @@ async function sendUserVerificationEmail( user: IUser, hostAddress: string | und
                        
     } else {
         bodyMessage = `<p>Por favor, acesse nosso website e acrescente o link abaixo para prosseguir com a verificação:</p>
-                       <pre>Link.................: #NossoWebsite + /api/user/verify-account</pre>
+                       <pre>Link.................: #NossoWebsite + /api/user/verify-user</pre>
                        <pre>Código de verificação: <code>${ user.verificationToken }</code></pre>`
     }
 
     await sendEmail(user.email, "Verificação de conta", bodyMessage)
+}
+
+async function sendForgotPasswordEmail( user: IUser, hostAddress: string | undefined = undefined ) {
+    let bodyMessage: string
+
+    bodyMessage = `<p>Hi ${ user.firstName },</p>
+                       <p>There was a request to change your password!</p><br>
+                       <p>If you did not make this request then please ignore this email.</p><br>`
+    
+    if ( hostAddress ) {
+        const changePasswordUrl = `http://${ hostAddress }/api/user/reset-password?token=${ user.resetPasswordToken?.token }`
+
+        bodyMessage += `<p>Otherwise, please click the button below to change your password</p>
+                        <a href="${ changePasswordUrl }">Change my password</a>`
+    }
+    else {
+        bodyMessage += `<p>Otherwise, follow the steps below to change your password</p><br>
+                        <pre>Link: #OurWebsite + /api/user/reset-password?token=${ user.resetPasswordToken?.token }</pre>`
+    }
+
+    await sendEmail( user.email, `Choose a new password for your [customer portal] account`, bodyMessage )
 }
