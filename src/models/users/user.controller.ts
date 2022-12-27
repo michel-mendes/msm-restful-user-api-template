@@ -8,7 +8,15 @@ import Logger from "../../../config/logger"
 
 // Validations
 import { validateData } from "../../middleware/validation-handler"
-import { userCreateValidation, userAuthenticationValidation, userAccountVerificationValidator, userForgotPasswordValidator } from "../../middleware/user-validator"
+
+import {
+    userCreateValidation,
+    userAuthenticationValidation,
+    userAccountVerificationValidator,
+    userForgotPasswordValidator,
+    userResetPasswordValidator
+} from "../../middleware/user-validator"
+
 import { userAuthorize } from "../../middleware/user-authorize"
 
 // Routes related to Users
@@ -18,7 +26,8 @@ userRouter.post('/register', userCreateValidation(), validateData, insertNewUser
 userRouter.get('/verify-user', userAccountVerificationValidator(),validateData, verifyUserAccount)
 userRouter.post('/authenticate', userAuthenticationValidation(), validateData, authenticate)
 userRouter.post('/forgot-password', userForgotPasswordValidator(), validateData, forgotPassword)
-userRouter.post('/reset-password') // TO DO
+userRouter.get('/reset-password', redirectToFront)
+userRouter.post('/reset-password', userResetPasswordValidator(), validateData, resetPassword)
 userRouter.get('/', userAuthorize( Roles.admin ), listAllUsers)
 userRouter.get('/:id', userAuthorize(), getById)
 userRouter.put('/:id', userAuthorize(), updateUser)
@@ -65,6 +74,22 @@ async function forgotPassword(req: Request, res: Response, next: NextFunction) {
     }
     catch (error: any) {
         Logger.error(`Error while sending the reset password email: ${ error.message }`)        
+        return next( error )
+    }
+}
+
+function redirectToFront(req: Request, res: Response, next: NextFunction) {
+    res.status(301).redirect( '[URL_TO_FRONTEND_CHANGE_PASSWORD_HERE]' + `?token=${ req.query.token }` )
+}
+
+async function resetPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+        await userService.resetPassword( req.body.token, req.body.password )
+
+        return res.status(200).json({message: `Password reset successful, you can now login`})
+    }
+    catch (error: any) {
+        Logger.error(`Error while setting the new password: ${ error.message }`)        
         return next( error )
     }
 }

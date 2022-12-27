@@ -11,6 +11,7 @@ export const userService = {
     authenticateUser,
     verifyEmail,
     forgotPassword,
+    resetPassword,
     create,
     getAll,
     getById,
@@ -140,6 +141,17 @@ async function forgotPassword( userEmail: string, originHost: string | undefined
 
 }
 
+async function resetPassword( resetToken: string, password: string ) {
+    const user: IUser | null = await User.findOne({ 'resetPasswordToken.token': resetToken })
+                                         .where('resetPasswordToken.expiresAt').gt( Date.now() )
+
+    if ( !user ) throw new AppError('Invalid reset token', 400)
+
+    user.password = await hashUserPassword( password )
+    user.resetPasswordToken = undefined
+    await user.save()
+}
+
 // Helper functions
 async function emailAlreadyRegistered( email: string ): Promise<boolean> {
     if ( !email ) return false
@@ -194,7 +206,7 @@ async function sendForgotPasswordEmail( user: IUser, hostAddress: string | undef
         const changePasswordUrl = `http://${ hostAddress }/api/user/reset-password?token=${ user.resetPasswordToken?.token }`
 
         bodyMessage += `<p>Otherwise, please click the button below to change your password</p>
-                        <a href="${ changePasswordUrl }">Change my password</a>`
+                        <a href="${ changePasswordUrl }"><button style="width: 130px; height: 40px; padding: 10px 25px; border: 2px solid #000; font-family: 'Lato', sans-serif; font-weight: 500; background: transparent; cursor: pointer;">Change my password</button></a>`
     }
     else {
         bodyMessage += `<p>Otherwise, follow the steps below to change your password</p><br>

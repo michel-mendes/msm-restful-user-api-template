@@ -4,7 +4,8 @@ export {
     userCreateValidation,
     userAuthenticationValidation,
     userAccountVerificationValidator,
-    userForgotPasswordValidator
+    userForgotPasswordValidator,
+    userResetPasswordValidator
 }
 
 const userCreateValidation = () => {
@@ -64,6 +65,22 @@ const userForgotPasswordValidator = () => {
         body('email')
         .isEmail()
         .withMessage('Email is required to start the reset password process')
+    ]
+
+}
+
+const userResetPasswordValidator = () => {
+    
+    return [
+        body('token')
+        .exists({checkFalsy: true})
+        .withMessage("Reset password token required but not sent"),
+
+        body('password')
+        .isString()
+        .withMessage('New password is required but not sent')
+        .isLength({ min: 6 })
+        .withMessage('The password must contain at least 6 characters'),
     ]
 
 }
