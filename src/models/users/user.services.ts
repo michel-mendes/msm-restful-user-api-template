@@ -27,7 +27,7 @@ async function authenticateUser(requestEmail: string, requestPassword: string, i
     const incorrectPassword = user ? (await compare( requestPassword, user.password! )) == false : true
 
     if ( userNotFound || incorrectPassword ) {
-        throw new AppError("Usuário ou senha inválidos", 400)
+        throw new AppError("Invalid email / password", 400)
     }
     
     // Successful user authentication
@@ -46,7 +46,7 @@ async function authenticateUser(requestEmail: string, requestPassword: string, i
 async function verifyEmail( token: string ) {
     const user: IUser | null = await User.findOne( {verificationToken: token} )
 
-    if ( !user ) throw new AppError( "Token inválido!", 404 )
+    if ( !user ) throw new AppError( "Invalid token!", 404 )
 
     user.verifiedAt = new Date()
     user.verificationToken = undefined
@@ -59,7 +59,7 @@ async function create( userData: IUser, host: string | undefined = undefined): P
     const userAlreadyExisits: boolean = await emailAlreadyRegistered( userData.email )
 
     if ( userAlreadyExisits ) {
-        throw new AppError( "Endereço de email já cadastrado", 400 )
+        throw new AppError( "Email address already registered", 400 )
     }
 
     userData.role = isFirstUser ? Roles.admin : Roles.user
@@ -83,7 +83,7 @@ async function getById( id : string ): Promise< IUser > {
     const user: IUser | null = await User.findById( id )
 
     if ( !user ) {
-        throw new AppError( "Usuário não encontrado", 404 )
+        throw new AppError( "User not found", 404 )
     }
 
     return <IUser>user
@@ -102,11 +102,11 @@ async function getByEmail( email: string ): Promise< Array<IUser> > {
 async function update( userId: string, newUserData: IUser ): Promise<IUser> {
     const userToEdit = await User.findById( userId )
 
-    if ( !userToEdit ) throw new AppError("Usuário não encontrado", 404)
+    if ( !userToEdit ) throw new AppError("User not found", 404)
 
     delete newUserData.role
 
-    if ( await emailAlreadyRegistered( newUserData.email ) ) throw new AppError("Email alreay registered", 400)
+    if ( await emailAlreadyRegistered( newUserData.email ) ) throw new AppError("Email already registered", 400)
 
     Object.assign<IUser, IUser>( <IUser>userToEdit, newUserData )
     await userToEdit.save({timestamps: true})
@@ -176,23 +176,23 @@ function generateRandomTokenString(): string {
 async function sendUserVerificationEmail( user: IUser, hostAddress: string | undefined = undefined ) {
     let bodyMessage: string
 
-    if ( hostAddress ) {
+    {
         const verifyUrl = `http://${ hostAddress }/api/user/verify-user?token=${ user.verificationToken }`
         const lastName = user.lastName ? ` ${user.lastName}` :  ``
 
-        bodyMessage = `<h2>Verificação de cadastro em nossa API</h2>
-                       <p>Olá ${ user.firstName }${ lastName }, muito obrigado pela realização de seu cadastro em nosso app.</p>
-                       <p>Agora falta apenas fazer a verificação de sua conta</p><br>
-                       <p>Por favor, clique no link abaixo para prosseguir com a verificação de seu endereço de email:</p>
-                       <code><a href="${ verifyUrl }">${ verifyUrl }</a></code>`
+        bodyMessage = `<h2>Email verification</h2>
+                       <p>Hi ${ user.firstName }${ lastName },
+                       We just need to verify your email address before you can access our platform.</p><br>
+                       <p>Please, click the button below to proceed the confirmation:</p>
+                       <div style="display: flex; flex-direction: row; justify-content: center; align-items: center;">
+                        <a href="${ verifyUrl }" style="width: 250px; height: 50px;">
+                            <button style="width: 100%; height: 100%; border-color: silver; border-radius: 7px;font-size: 18px; cursor: pointer;">Verify my email address</button>
+                        </a>
+                       </div>`
                        
-    } else {
-        bodyMessage = `<p>Por favor, acesse nosso website e acrescente o link abaixo para prosseguir com a verificação:</p>
-                       <pre>Link.................: #NossoWebsite + /api/user/verify-user</pre>
-                       <pre>Código de verificação: <code>${ user.verificationToken }</code></pre>`
     }
 
-    await sendEmail(user.email, "Verificação de conta", bodyMessage)
+    await sendEmail(user.email, "Please, verify your email address", bodyMessage)
 }
 
 async function sendForgotPasswordEmail( user: IUser, hostAddress: string | undefined = undefined ) {
@@ -202,16 +202,12 @@ async function sendForgotPasswordEmail( user: IUser, hostAddress: string | undef
                        <p>There was a request to change your password!</p><br>
                        <p>If you did not make this request then please ignore this email.</p><br>`
     
-    if ( hostAddress ) {
+    {
         const changePasswordUrl = `http://${ hostAddress }/api/user/reset-password?token=${ user.resetPasswordToken?.token }`
 
         bodyMessage += `<p>Otherwise, please click the button below to change your password</p>
-                        <a href="${ changePasswordUrl }"><button style="width: 130px; height: 40px; padding: 10px 25px; border: 2px solid #000; font-family: 'Lato', sans-serif; font-weight: 500; background: transparent; cursor: pointer;">Change my password</button></a>`
-    }
-    else {
-        bodyMessage += `<p>Otherwise, follow the steps below to change your password</p><br>
-                        <pre>Link: #OurWebsite + /api/user/reset-password?token=${ user.resetPasswordToken?.token }</pre>`
+                        <a href="${ changePasswordUrl }"><button style="width: 130px; height: 40px; padding: 10px 25px; border: 2px solid #000;cursor: pointer;">Change my password</button></a>`
     }
 
-    await sendEmail( user.email, `Choose a new password for your [customer portal] account`, bodyMessage )
+    await sendEmail( user.email, `Instructions for resetting your password`, bodyMessage )
 }

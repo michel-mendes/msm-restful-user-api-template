@@ -23,7 +23,6 @@ interface IUser extends Document {
 
 const userSchema = new Schema<IUser>(
     {
-        // _id: Number, // Set automatically by mongoose
         firstName: { type: String, required: true },
         lastName: { type: String },
         role: { type: String },

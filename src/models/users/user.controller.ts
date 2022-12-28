@@ -49,7 +49,7 @@ async function authenticate(req: Request, res: Response, next: NextFunction) {
         res.status(200).json( authResult )
     }
     catch (error: any) {
-        Logger.error(`Erro durante autenticação do usuário: ${ error.message }`)
+        Logger.error(`Error while user authentication: ${ error.message }`)
         return next( error )
     }
 }
@@ -61,7 +61,7 @@ async function verifyUserAccount(req: Request, res: Response, next: NextFunction
         return res.status(200).json({message: "Verificação concluída com sucesso, você já pode fazer login!"})
     }
     catch (error: any) {
-        Logger.error(`Erro durante a verificação de email do usuário: ${ error.message }`)
+        Logger.error(`Error while user email verification: ${ error.message }`)
         return next( error )
     }
 }
@@ -106,7 +106,7 @@ async function insertNewUser(req: Request, res: Response, next: NextFunction) {
         return res.status(201).json( newUser )
     }
     catch (error: any) {
-        Logger.error(`Erro ao registrar novo usuário: ${ error.message }`)
+        Logger.error(`Error while user registration: ${ error.message }`)
         return next( error )
     }
 }
@@ -118,7 +118,7 @@ async function listAllUsers(req: Request, res: Response, next: NextFunction) {
         return res.status(200).json( usersList )
     }
     catch (e: any) {
-        Logger.error( `Erro durante consulta de usuários: ${ e.message }` )
+        Logger.error( `Error while getting users list: ${ e.message }` )
         return next( e )
     }
 
@@ -136,7 +136,7 @@ async function getById(req: JwtRequest, res: Response, next: NextFunction) {
         return res.status(200).json( user )
     }
     catch (e: any) {
-        Logger.error( `Erro ao pesquisar usuário: ${ e.message }` )
+        Logger.error( `Error while getting user by id: ${ e.message }` )
         return next( e )    
     }
 }
@@ -148,7 +148,7 @@ async function updateUser(req: Request, res: Response, next: NextFunction) {
         return res.status(200).json( changedUser )
     }
     catch (e: any) {
-        Logger.error( `Erro ao atualizar usuário: ${ e.message }` )
+        Logger.error( `Error while updating user data: ${ e.message }` )
         return next( e )
     }
 }
@@ -160,7 +160,7 @@ async function deleteUser(req: Request, res: Response, next: NextFunction) {
         return res.status(200).json( {message: "User successfully deleted"} )
     }
     catch (e: any) {
-        Logger.error( `Erro ao excluir usuário: ${ e.message }` )
+        Logger.error( `Error while deleting user: ${ e.message }` )
         return next(e)
     }
 }

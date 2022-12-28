@@ -13,21 +13,17 @@ const userCreateValidation = () => {
     return [
         body('firstName')
         .isString()
-        .withMessage('O primeiro nome é obrigatório'),
-
-        body('lastName')
-        .isString()
-        .withMessage('O último nome é obrigatório'),
+        .withMessage('User first name is required'),
 
         body('email')
         .isString()
-        .withMessage('O email é obrigatório'),
+        .withMessage('User email address is required'),
 
         body('password')
         .isString()
-        .withMessage('A senha é obrigatória')
+        .withMessage('User password is required')
         .isLength({ min: 6 })
-        .withMessage('A senha deve conter no mínimo 6 caracteres'),
+        .withMessage('Password must have at least 6 digits'),
     ]
 
 }
@@ -37,13 +33,13 @@ const userAuthenticationValidation = () => {
     return[
         body('email')
         .isString()
-        .withMessage('Informe o email para fazer login'),
+        .withMessage('Email address is required'),
 
         body('password')
         .isString()
-        .withMessage('A senha é obrigatória')
+        .withMessage('User password is required')
         .isLength({ min: 6 })
-        .withMessage('A senha deve conter no mínimo 6 caracteres'),        
+        .withMessage('Password must have at least 6 digits'),        
     ]
 
 }
@@ -54,7 +50,7 @@ const userAccountVerificationValidator = () => {
     return [
         check('token')
         .exists({checkFalsy: true})
-        .withMessage("Informe o token de validação via query string '?token='")
+        .withMessage("Missing '?token=[token_code]' in query string")
     ]
 
 }
@@ -64,7 +60,7 @@ const userForgotPasswordValidator = () => {
     return [
         body('email')
         .isEmail()
-        .withMessage('Email is required to start the reset password process')
+        .withMessage('Email address is required')
     ]
 
 }
