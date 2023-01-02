@@ -19,6 +19,7 @@ interface IUser extends Document {
         token: string;
         expireAt: Date;
     };
+    isVerified?: boolean;
 }
 
 const userSchema = new Schema<IUser>(

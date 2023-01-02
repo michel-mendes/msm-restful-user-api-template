@@ -12,7 +12,6 @@ import { validateData } from "../../middleware/validation-handler"
 import {
     userCreateValidation,
     userAuthenticationValidation,
-    userAccountVerificationValidator,
     userForgotPasswordValidator,
     userResetPasswordValidator
 } from "../../middleware/user-validator"
@@ -23,10 +22,10 @@ import { userAuthorize } from "../../middleware/user-authorize"
 const userRouter = Router()
 
 userRouter.post('/register', userCreateValidation(), validateData, insertNewUser)
-userRouter.get('/verify-user', userAccountVerificationValidator(),validateData, verifyUserAccount)
+userRouter.get('/verify-user', verifyUserAccount)
 userRouter.post('/authenticate', userAuthenticationValidation(), validateData, authenticate)
 userRouter.post('/forgot-password', userForgotPasswordValidator(), validateData, forgotPassword)
-userRouter.get('/reset-password', redirectToFront)
+userRouter.get('/reset-password', renderChangePasswordPage)
 userRouter.post('/reset-password', userResetPasswordValidator(), validateData, resetPassword)
 userRouter.get('/', userAuthorize( Roles.admin ), listAllUsers)
 userRouter.get('/:id', userAuthorize(), getById)
@@ -58,11 +57,16 @@ async function verifyUserAccount(req: Request, res: Response, next: NextFunction
     try {
         await userService.verifyEmail( <string>req.query.token )
 
-        return res.status(200).json({message: "Verificação concluída com sucesso, você já pode fazer login!"})
+        return res.status(200).render('verify-user', {message: "User verification successful, now you can log in!"})
+        // return res.status(200).json({message: "User verification successful, now you can log in!"})
     }
     catch (error: any) {
+        const code = error.code ? error.code : 500
+
         Logger.error(`Error while user email verification: ${ error.message }`)
-        return next( error )
+
+        return res.status( code ).render('verify-user', {message: error.message })
+        // return next( error )
     }
 }
 
@@ -78,8 +82,9 @@ async function forgotPassword(req: Request, res: Response, next: NextFunction) {
     }
 }
 
-function redirectToFront(req: Request, res: Response, next: NextFunction) {
-    res.status(301).redirect( '[URL_TO_FRONTEND_CHANGE_PASSWORD_HERE]' + `?token=${ req.query.token }` )
+function renderChangePasswordPage(req: Request, res: Response, next: NextFunction) {
+    // res.status(301).redirect( '[URL_TO_FRONTEND_CHANGE_PASSWORD_HERE]' + `?token=${ req.query.token }` )
+    res.render('change-user-password-page')
 }
 
 async function resetPassword(req: Request, res: Response, next: NextFunction) {
@@ -127,9 +132,8 @@ async function listAllUsers(req: Request, res: Response, next: NextFunction) {
 async function getById(req: JwtRequest, res: Response, next: NextFunction) {
     try {
 
-        if ( req.auth?.userId !== req.params.id ) {
-            throw new AppError( 'Unauthorized access', 401 )
-        }
+        // Allow Admin to get any user and normal users to get only themselves
+        blockRegularUserToGetOutherUsers( req.auth?.userId, req.auth?.userRole, req.params.id )
         
         let user: IUser = await userService.getById( req.params.id )
 
@@ -141,8 +145,11 @@ async function getById(req: JwtRequest, res: Response, next: NextFunction) {
     }
 }
 
-async function updateUser(req: Request, res: Response, next: NextFunction) {
+async function updateUser(req: JwtRequest, res: Response, next: NextFunction) {
     try {
+        // Allow Admin to update any user and normal users to update only themselves
+        blockRegularUserToGetOutherUsers( req.auth?.userId, req.auth?.userRole, req.params.id )
+        
         const changedUser = await userService.update( req.params.id, req.body )
 
         return res.status(200).json( changedUser )
@@ -153,8 +160,11 @@ async function updateUser(req: Request, res: Response, next: NextFunction) {
     }
 }
 
-async function deleteUser(req: Request, res: Response, next: NextFunction) {
+async function deleteUser(req: JwtRequest, res: Response, next: NextFunction) {
     try {
+        // Allow Admin to delete any user and normal users to delete only themselves
+        blockRegularUserToGetOutherUsers( req.auth?.userId, req.auth?.userRole, req.params.id )
+        
         await userService._delete( req.params.id )
         
         return res.status(200).json( {message: "User successfully deleted"} )
@@ -162,5 +172,15 @@ async function deleteUser(req: Request, res: Response, next: NextFunction) {
     catch (e: any) {
         Logger.error( `Error while deleting user: ${ e.message }` )
         return next(e)
+    }
+}
+
+// Helper functions
+function blockRegularUserToGetOutherUsers(requestingUserId: string, requestingUserRole: string, targetUserId: string) {
+    if (
+        requestingUserId !== targetUserId &&
+        requestingUserRole !== Roles.admin    
+    ) {
+        throw new AppError( 'Unauthorized access', 401 )
     }
 }

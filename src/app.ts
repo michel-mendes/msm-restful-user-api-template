@@ -3,6 +3,7 @@ process.env.NODE_ENV = process.argv[2] || 'development'
 require("dotenv").config()
 
 // Module imports
+import { handle404Error, handleCustomErrors } from "./middleware/error-handler"
 import express from "express"
 import cookieParser from "cookie-parser"
 import cors from "cors"
@@ -11,10 +12,16 @@ import db from "../config/db"
 import Logger from "../config/logger"
 import morganMiddleware from "./middleware/morgan-handler"
 import apiRouter from './api.router'
-import { handle404Error, handleCustomErrors } from "./middleware/error-handler"
+import path from "path"
 
 const app = express()
 const port = config.get<number>( 'port' )
+
+// Set EJS to the default HTML rendering engine
+app.use( express.static( path.join( __dirname, '..', 'public' ) ) )
+console.log(path.join( __dirname, '..', 'public' ))
+app.set('views', __dirname + '/views');
+app.set('view engine', 'ejs')
 
 // Middlewares
 app.use( express.json() )

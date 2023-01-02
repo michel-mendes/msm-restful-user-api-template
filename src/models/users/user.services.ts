@@ -1,11 +1,11 @@
-import { AppError } from "../../middleware/error-handler";
-import { IUser, User } from "./user";
-import { hash, compare } from "bcryptjs";
-import { sendEmail } from "../../helpers/mailer";
+import { AppError } from "../../middleware/error-handler"
+import { IUser, User } from "./user"
+import { hash, compare } from "bcryptjs"
+import { sendEmail } from "../../helpers/mailer"
 import config from "config"
 import jwt from "jsonwebtoken"
 import crypto from "crypto"
-import Roles from "../../types/user-roles";
+import Roles from "../../types/user-roles"
 
 export const userService = {
     authenticateUser,
@@ -23,11 +23,16 @@ export const userService = {
 async function authenticateUser(requestEmail: string, requestPassword: string, ipAddress: string): Promise<any> {
     const user: IUser | null = await User.findOne( {email: requestEmail} )
 
-    const userNotFound = user == null
-    const incorrectPassword = user ? (await compare( requestPassword, user.password! )) == false : true
+    const userNotFound = (user == null)
+    const incorrectPassword = (user ? (await compare( requestPassword, user.password! )) == false : true)
 
     if ( userNotFound || incorrectPassword ) {
         throw new AppError("Invalid email / password", 400)
+    }
+    
+    // Unverified users can't login
+    if ( !user.isVerified ) {
+        throw new AppError("Unauthorized access, unverified user", 401)
     }
     
     // Successful user authentication
@@ -46,7 +51,7 @@ async function authenticateUser(requestEmail: string, requestPassword: string, i
 async function verifyEmail( token: string ) {
     const user: IUser | null = await User.findOne( {verificationToken: token} )
 
-    if ( !user ) throw new AppError( "Invalid token!", 404 )
+    if ( !token || !user ) throw new AppError( "Invalid token!", 404 )
 
     user.verifiedAt = new Date()
     user.verificationToken = undefined
@@ -206,7 +211,9 @@ async function sendForgotPasswordEmail( user: IUser, hostAddress: string | undef
         const changePasswordUrl = `http://${ hostAddress }/api/user/reset-password?token=${ user.resetPasswordToken?.token }`
 
         bodyMessage += `<p>Otherwise, please click the button below to change your password</p>
-                        <a href="${ changePasswordUrl }"><button style="width: 130px; height: 40px; padding: 10px 25px; border: 2px solid #000;cursor: pointer;">Change my password</button></a>`
+                        <a href="${ changePasswordUrl }" style="cursor: pointer;">
+                            <button style="display: block; margin: 0 auto; height: 50px; border-color: silver; border-radius: 7px;font-size: 18px;">Change my password</button>
+                        </a>`
     }
 
     await sendEmail( user.email, `Instructions for resetting your password`, bodyMessage )
