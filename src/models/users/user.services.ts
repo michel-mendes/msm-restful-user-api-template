@@ -64,7 +64,7 @@ async function create( userData: IUser, host: string | undefined = undefined): P
     const userAlreadyExisits: boolean = await emailAlreadyRegistered( userData.email )
 
     if ( userAlreadyExisits ) {
-        throw new AppError( "Email address already registered", 400 )
+        throw new AppError( "Email address already registered", 409 )
     }
 
     userData.role = isFirstUser ? Roles.admin : Roles.user
@@ -91,7 +91,7 @@ async function getById( id : string ): Promise< IUser > {
         throw new AppError( "User not found", 404 )
     }
 
-    return <IUser>user
+    return user
 }
 
 async function getByEmail( email: string ): Promise< Array<IUser> > {
@@ -111,7 +111,7 @@ async function update( userId: string, newUserData: IUser ): Promise<IUser> {
 
     delete newUserData.role
 
-    if ( await emailAlreadyRegistered( newUserData.email ) ) throw new AppError("Email already registered", 400)
+    if ( await emailAlreadyRegistered( newUserData.email ) ) throw new AppError("Email already registered", 409)
 
     Object.assign<IUser, IUser>( <IUser>userToEdit, newUserData )
     await userToEdit.save({timestamps: true})

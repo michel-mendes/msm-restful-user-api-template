@@ -31,9 +31,18 @@ function handleCustomErrors(err: any, req: Request, res: Response, next: NextFun
         case err.name === 'TokenExpiredError': { sendExpiredTokenError(err, req, res, next ) }; break
         case err.name === 'ValidationError': { sendMongooseValidationError(err, req, res, next) }; break
         case err.name === 'UnauthorizedError': { sendUnauthorizedError(err, req, res, next) }; break
+		case err.name === 'CastError' &&
+            (err.message as string)
+            .toLocaleUpperCase()
+            .includes("OBJECTID"): { sendInvalidObjectIdFormat(err, req, res, next) }; break
         default: { sendServerSideError(err, req, res, next) }
     }
 
+}
+
+function sendInvalidObjectIdFormat(err: any, req: Request, res: Response, next: NextFunction) {
+    // Mongoose invalid format of ObjectId
+    return res.status(400).json({message: "Invalid format for ID"})
 }
 
 function sendMongooseValidationError(err: any, req: Request, res: Response, next: NextFunction) {
